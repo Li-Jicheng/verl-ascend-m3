@@ -1,7 +1,12 @@
-set -x
+set -e
+source /usr/local/Ascend/cann-9.1.0-ljc/cann-9.1.0/set_env.sh
+#ATB公共组件
+source /usr/local/Ascend/nnal/atb/set_env.sh
+#!重要
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$CANN_RUNTIME_LIB:$LD_LIBRARY_PATH"
 
 MODEL_ID=${MODEL_ID:-Qwen/Qwen3-0.6B}
-MODEL_PATH=${MODEL_PATH:-${HOME}/models/${MODEL_ID}}
+MODEL_PATH=/mnt/share/l00991686/m3_env_setup/Qwen3-0.6B
 NNODES=${NNODES:-1}
 NDEVICES_PER_NODE=${NDEVICES_PER_NODE:-}
 
@@ -25,11 +30,11 @@ TOTAL_TRAINING_STEPS=${TOTAL_TRAINING_STEPS:-15}
 SAVE_FREQ=${SAVE_FREQ:-20}
 TEST_FREQ=${TEST_FREQ:-20}
 
-PROJECT_NAME=${PROJECT_NAME:-verl_grpo_gsm8k}
+PROJECT_NAME=${PROJECT_NAME:-verl_grpo_aime}
 EXPERIMENT_NAME=${EXPERIMENT_NAME:-qwen3_0.6b_grpo_fsdp2_vllm_$(date +%Y%m%d_%H%M)}
 
-TRAIN_FILE=${TRAIN_FILE:-$HOME/data/gsm8k/train.parquet}
-TEST_FILE=${TEST_FILE:-$HOME/data/gsm8k/test.parquet}
+TRAIN_FILE=${TRAIN_FILE:-/mnt/share/l00991686/dataset/aime-2024.parquet}
+TEST_FILE=${TEST_FILE:-/mnt/share/l00991686/dataset/aime-2024.parquet}
 
 ########################### derived defaults ###########################
 n_devices_per_node=${NDEVICES_PER_NODE:-8}
@@ -57,7 +62,7 @@ DATA=(
 
 MODEL=(
     actor_rollout_ref.model.path="$MODEL_PATH"
-    actor_rollout_ref.model.use_remove_padding=True
+    actor_rollout_ref.model.use_remove_padding=False
     actor_rollout_ref.model.enable_gradient_checkpointing=True
 )
 
@@ -104,8 +109,8 @@ TRAINER=(
 
 EXTRA=(
     actor_rollout_ref.actor.use_torch_compile=False
-    actor_rollout_ref.actor.fsdp_config.param_offload=True
-    actor_rollout_ref.actor.fsdp_config.optimizer_offload=True
+    actor_rollout_ref.actor.fsdp_config.param_offload=False
+    actor_rollout_ref.actor.fsdp_config.optimizer_offload=False
     actor_rollout_ref.actor.fsdp_config.ulysses_sequence_parallel_size=${SP_SIZE}
     actor_rollout_ref.ref.fsdp_config.ulysses_sequence_parallel_size=${SP_SIZE}
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=20

@@ -164,14 +164,24 @@ class VeOmniEngine(FSDPEngine):
             data_parallel_replicate_size = dp_size // fsdp_size
             data_parallel_shard_size = fsdp_size
 
-        parallel_state.init_parallel_state(
+        # parallel_state.init_parallel_state(
+        #     dp_size=dp_size,
+        #     dp_replicate_size=data_parallel_replicate_size,
+        #     dp_shard_size=data_parallel_shard_size,
+        #     extra_parallel_sizes=(self.engine_config.expert_parallel_size,),
+        #     ulysses_size=self.engine_config.ulysses_parallel_size,
+        #     dp_mode=self.data_parallel_mode,
+        # )
+        self.veomni_parallel_state = parallel_state._init_parallel_state(
             dp_size=dp_size,
             dp_replicate_size=data_parallel_replicate_size,
             dp_shard_size=data_parallel_shard_size,
             extra_parallel_sizes=(self.engine_config.expert_parallel_size,),
             ulysses_size=self.engine_config.ulysses_parallel_size,
             dp_mode=self.data_parallel_mode,
+            name=None,
         )
+        parallel_state.set_parallel_state(self.veomni_parallel_state)
 
         if self.engine_config.full_determinism:
             enable_full_determinism(seed=self.engine_config.seed)
@@ -636,8 +646,23 @@ class VeOmniEngine(FSDPEngine):
         if converter is not None and hasattr(converter, "export_weights"):
             return converter.export_weights(self.module), None
 
+        # params = self.module.state_dict()
+        # params = convert_weight_keys(params, getattr(self.module, "_fsdp_wrapped_module", self.module))
+        # from .m3_weight_export import M3ExportSpec, iter_m3_param          
+        # params = self.module.state_dict ()         
+        # m3_spec = (M3ExportSpec.from_config (self.module.config)
+        # if getattr (self.module.config, "model_type", None) == "minimax_m3_vl" else None)
+        # if m3_spec is None:             
+        #     params = convert_weight_keys (params, getattr (self.module, "_fsdp_wrapped_module", self.module))
         params = self.module.state_dict()
-        params = convert_weight_keys(params, getattr(self.module, "_fsdp_wrapped_module", self.module))
+        m3_spec = None
+        if getattr(self.module.config, "model_type", None) == "minimax_m3_vl":
+            from .m3_weight_export import M3ExportSpec, iter_m3_param
+            m3_spec = M3ExportSpec.from_config(self.module.config)
+        else:
+            params = convert_weight_keys(
+                params, getattr(self.module, "_fsdp_wrapped_module", self.module)
+            )
 
         if self._is_offload_param:
             offload_veomni_model_to_cpu(self.module)
@@ -653,6 +678,10 @@ class VeOmniEngine(FSDPEngine):
                 unsharded_tensor = (
                     param.to(device, non_blocking=True).full_tensor() if isinstance(param, DTensor) else param
                 )
+
+                if m3_spec is not None:
+                    yield from iter_m3_param (name, unsharded_tensor, m3_spec, ps)       
+                    continue
 
                 is_expert_layer = "mlp.experts." in name
                 is_proj = any(p in name for p in ["down_proj", "gate_proj", "up_proj", "gate_up_proj"])

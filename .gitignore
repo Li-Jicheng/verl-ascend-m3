@@ -130,3 +130,9 @@ logs
 log
 outputs
 .history
+
+# local experiment artifacts
+extra-info/
+tensorboard_log/
+torch_compile_debug/
+
