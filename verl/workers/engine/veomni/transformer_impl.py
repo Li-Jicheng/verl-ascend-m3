@@ -109,6 +109,16 @@ class VeOmniEngine(FSDPEngine):
         sp_enabled = parallel_state.get_parallel_state().sp_enabled
         sp_shard_collator = OmniSequenceShardCollator() if sp_enabled else None
 
+        # [TEMP-VERIFY] one-shot: print input_ids length before transform to
+        # confirm whether verl upstream has pre-sliced by Ulysses. Remove after.
+        if self.module.config.model_type == "minimax_m3_vl":
+            print(
+                f"[VERIFY] minimax_m3_vl sp_enabled={sp_enabled} "
+                f"input_ids.shape={tuple(input_ids_rmpad.shape)} "
+                f"sp_size={parallel_state.get_parallel_state().sp_size}",
+                flush=True,
+            )
+
         if self.module.config.model_type in VL_TYPE2INDEX.keys():
             image_mask = input_ids_rmpad == VL_TYPE2INDEX[self.module.config.model_type]["IMAGE_INPUT_INDEX"]
             video_mask = input_ids_rmpad == VL_TYPE2INDEX[self.module.config.model_type]["VIDEO_INPUT_INDEX"]

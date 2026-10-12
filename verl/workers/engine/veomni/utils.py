@@ -40,6 +40,10 @@ VL_TYPE2INDEX = {
         "IMAGE_INPUT_INDEX": 248056,
         "VIDEO_INPUT_INDEX": 248057,
     },
+    "minimax_m3_vl": {
+        "IMAGE_INPUT_INDEX": 200025,
+        "VIDEO_INPUT_INDEX": 200026,
+    },
 }
 
 
